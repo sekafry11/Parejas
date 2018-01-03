@@ -1,3 +1,9 @@
+body > div, .extras > div {
+		display: inline-block;
+		vertical-align: top;
+		width: 48%;
+}
+label{display: block;}
 td{
 	overflow: hidden;
 	position: relative;
