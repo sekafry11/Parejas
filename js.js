@@ -1,26 +1,59 @@
-function Parejas(){
-	var par = this;
-	var cantidad_parejas = 10,
-		piezas_x_pareja = 2,
-		previsualizacion = false,
-		dividir_imagen = 1,
-		divisiones_completas = false;
-		fallos = 0,
+new function (){
+	//Config
+	var ts = this,
+		parejas = 10,
 		intentos = 0, //0 -> infinito
+		piezas = 2,
+		divisiones = 1,
+		completas = false,
+		multi = false,
+
+		dir_ajax = "https://sekafry.000webhostapp.com/parejas/", // Directorio ajax
+		previsualizacion = false,
+		fallos = 0,
 		ancho_img = 100,
 		alto_img = 100,
 		ancho_tabla = 5,
 		lista_cartas = [],
 		carta_actual = -1,
 		numero_actual = 0,
-		estado = 1,
-		v_fallos = document.createElement("span"),
-		v_encontradas = document.createElement("div"),
-		tabla = document.createElement("table");
+		estado = 1;
+		var a;
+
+		var tabla = newNode("table", (a = document.getElementById("game"))?a:null),
+
+	//Visual Config
+		l_parejas = newNode("label", (a = (a = document.getElementById("config"))?a:null), {"innerHTML": "Parejas: "}),
+		i_parejas = newNode("input", l_parejas, {"type": "number", "value":parejas, "onchange": function(e){parejas = e.target.value || 0}}),
+
+		l_intentos = newNode("label", a, {"innerHTML": "Intentos: "}),
+		i_intentos = newNode("input", l_intentos, {"type": "number", "value":intentos, "onchange": function(e){intentos = e.target.value || 0}}),
+
+		l_piezas = newNode("label", a, {"innerHTML": "Piezas por pareja: "}),
+		i_piezas = newNode("input", l_piezas, {"type": "number", "value":piezas, "onchange": function(e){piezas = e.target.value || 0}}),
+
+		l_divisiones = newNode("label", a, {"innerHTML": "Divisiones en la imagen: "}),
+		i_divisiones = newNode("input", l_divisiones, {"type": "number", "value":divisiones, "onchange": function(e){divisiones = e.target.value || 0}}),
+
+		l_completas = newNode("label", a, {"innerHTML": "Divisiones completas: "}),
+		i_completas = newNode("input", l_completas, {"type": "checkbox", "checked": completas, "onchange": function(e){completas = e.target.checked || false}}),
+
+		b_reset = newNode("button", a, {"innerHTML": "Cargar", "onclick": function(e){ts.reset();return false;}}),
+
+	//Visual Status
+		p_fallos = newNode("p", (a = (a = document.getElementById("status"))?a:null), {"innerHTML": "Fallos: "}),
+		s_fallos = newNode("span", p_fallos),
+
+		d_encontradas = newNode("div", a),
+
+	//Visual multiplayer
+		l_multi = newNode("label", (a = (a = document.getElementById("multiplayer"))?a:null), {"innerHTML": "Multijugador: "}),
+		i_multi = newNode("input", l_multi, {"type": "checkbox", "checked": multi, "onchange": function(e){multi = e.target.checked || false; changeMulti();}}),
+		d_multi = newNode("div", a, {"innerHTML": "No conectado"});
 
 	function Carta(n_pareja, par, img, ancho, alto){
-		var parejas = par,
-			carta = this,
+		var tsp = par, // parejas
+			ts = this, // carta
 			n_pareja = n_pareja,
 			img = img,
 			ancho = ancho,
@@ -43,7 +76,7 @@ function Parejas(){
 		td.onclick = function(){
 			if(!img.getAttribute("class")){
 				img.setAttribute("class", "visible");
-				parejas.e_click(carta, n_pareja);
+				tsp.e_click(ts, n_pareja);
 			}
 		};
 	};
@@ -52,20 +85,20 @@ function Parejas(){
 		var datos = [], d_temp, img = new Image;
 		datos[0] = {w: 100, f:function(a){return "./images/div_0/"+a+".jpg";}};
 		datos[1] = {w: 200, f: function(a){return "./images/div_1/"+a+".jpg";}};
-		img.src = (d_temp = (datos[dividir_imagen])?datos[dividir_imagen]:datos[1]).f(n_pareja);
-		var left = (divisiones_completas)?
-			ancho_img*(n_pieza-Math.floor(n_pieza/dividir_imagen)*n_pieza):
-			n_pieza*(d_temp.w/(dividir_imagen*2));
+		img.src = (d_temp = (datos[divisiones])?datos[divisiones]:datos[1]).f(n_pareja);
+		var left = (completas)?
+			ancho_img*(n_pieza-Math.floor(n_pieza/divisiones)*n_pieza):
+			n_pieza*(d_temp.w/(divisiones*2));
 		img.style.left = "-"+left+"px";
 		return img;
 	}
 
 	function generarCartas(){
 		var n_pareja, n_pieza;
-		for(n_pareja = 0; n_pareja < cantidad_parejas; ++n_pareja){
-			for(n_pieza = 0; n_pieza < piezas_x_pareja; ++n_pieza){
+		for(n_pareja = 0; n_pareja < parejas; ++n_pareja){
+			for(n_pieza = 0; n_pieza < piezas; ++n_pieza){
 				lista_cartas.push(
-					new Carta(n_pareja, par, generarImagen(n_pareja, n_pieza), ancho_img, alto_img)
+					new Carta(n_pareja, ts, generarImagen(n_pareja, n_pieza), ancho_img, alto_img)
 				);
 			}
 		}
@@ -88,76 +121,10 @@ function Parejas(){
 		//Reset Tabla
 		tabla.innerHTML = "";
 		generarCartas();
-
 		//Reset Status
 		fallos = 0;
-		v_fallos.innerHTML = fallos;
-		var a, p;
-		if(estado && (a = document.getElementById("status"))){
-			p = document.createElement("p");
-			p.innerHTML = "Fallos: ";
-			p.appendChild(v_fallos);
-			a.appendChild(p);
-			a.appendChild(v_encontradas);
-		}
-
-		//Reset config
-		if(estado && (a = document.getElementById("config"))){
-			//Crear elementos
-			var v_reset = document.createElement("button"),
-				v_intentos = document.createElement("input"),
-				v_parejas = document.createElement("input"),
-				v_piezas = document.createElement("input"),
-				v_dividir = document.createElement("input");
-				v_d_completas = document.createElement("input");
-
-			//Cargar valores
-			v_intentos.setAttribute("type", "number");
-			v_intentos.value = intentos;
-			v_parejas.setAttribute("type", "number");
-			v_parejas.value = cantidad_parejas;
-			v_piezas.setAttribute("type", "number");
-			v_piezas.value = piezas_x_pareja;
-			v_dividir.setAttribute("type", "number");
-			v_dividir.value = dividir_imagen;
-			v_d_completas.setAttribute("type", "checkbox");
-			v_d_completas.checked = divisiones_completas;
-			v_reset.innerHTML = "Reset";
-
-			//Crear eventos
-			v_intentos.onchange = function(e){intentos = e.target.value || 0};
-			v_parejas.onchange = function(e){cantidad_parejas = e.target.value || 0};
-			v_piezas.onchange = function(e){piezas_x_pareja = e.target.value || 0};
-			v_dividir.onchange = function(e){dividir_imagen = e.target.value || 0};
-			v_d_completas.onchange = function(e){divisiones_completas = e.target.checked || false};
-			v_reset.onclick = function(e){par.reset();return false;}
-
-			//Mostrar config
-			p = document.createElement("label");
-			p.innerHTML = "Número de intentos: ";
-			p.appendChild(v_intentos);
-			a.appendChild(p);
-			p = document.createElement("label");
-			p.innerHTML = "Número de parejas: ";
-			p.appendChild(v_parejas);
-			a.appendChild(p);
-			p = document.createElement("label");
-			p.innerHTML = "Número de piezas: ";
-			p.appendChild(v_piezas);
-			a.appendChild(p);
-			p = document.createElement("label");
-			p.innerHTML = "Número de dividir: ";
-			p.appendChild(v_dividir);
-			a.appendChild(p);
-			p = document.createElement("label");
-			p.innerHTML = "Divisiones de imagenes completas: ";
-			p.appendChild(v_d_completas);
-			a.appendChild(p);
-			p = document.createElement("p");
-			p.innerHTML = "Para confirmar algunos cambios hay que resetear la tabla: ";
-			p.appendChild(v_reset);
-			a.appendChild(p);
-		}
+		s_fallos.innerHTML = fallos;
+		d_encontradas.innerHTML = "";
 		estado = 0;
 		return tabla;
 	};
@@ -168,26 +135,32 @@ function Parejas(){
 			++numero_actual;
 		}else{
 			if(carta_actual == numero){
-				if(++numero_actual >= piezas_x_pareja){
+				if(++numero_actual >= piezas){
 					//Todas las parejas encontradas
 					lista_cartas = [];
 					numero_actual = 0;
 					carta_actual = -1;
-					v_encontradas.appendChild(carta.getImagen());
+					d_encontradas.appendChild(carta.getImagen());
 				}
 			}else{
-				setTimeout(par.hidden, 500);
+				for(var a in lista_cartas){
+					setTimeout(lista_cartas[a].hidden, 500);
+				}
+				lista_cartas = [];
 				numero_actual = 0;
 				carta_actual = -1;
-				v_fallos.innerHTML = ++fallos;
+				s_fallos.innerHTML = ++fallos;
 			}
 		}
 	}
-	this.hidden = function(){
-		var a;
-		for(a in lista_cartas){
-			lista_cartas[a].hidden();
+	function changeMulti(){
+		if(multi){
+			ajax(dir_ajax+"login.php?conect=true", function(e){d_multi.innerHTML = e});
+		}else{
+			ajax(dir_ajax+"login.php?conect=false", function(e){d_multi.innerHTML = e});
 		}
-		lista_cartas = [];
 	}
+
+
+	generarCartas();
 }
